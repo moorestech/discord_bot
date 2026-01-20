@@ -66,6 +66,42 @@ src/
 - Express 4.x（keep-aliveサーバー）
 - Node.js >= 18
 
+## Renderデプロイ
+
+**本番URL:** https://moorestech-discord-bot.onrender.com/
+
+**エンドポイント:**
+- `/` - ルート（"OK"を返す）
+- `/healthz` - ヘルスチェック用
+
+**デプロイ設定（render.yaml）:**
+- ランタイム: Node.js
+- ビルドコマンド: `npm ci --include=dev && npm run build`
+- 開始コマンド: `npm start`
+- プラン: Starter
+
+**Render環境変数（要設定）:**
+- `DISCORD_TOKEN` - ボットトークン
+- `DISCORD_CLIENT_ID` - アプリケーションクライアントID
+- `GUILD_ID` - ギルドID（オプション）
+- `NODE_ENV` - `production`
+
+**デプロイ方法:**
+1. GitHubにpushすると自動デプロイ（autoDeploy有効）
+2. 手動デプロイ: Renderダッシュボードまたは`render deploys create`
+
+**Render CLI:**
+```bash
+# サービス一覧
+render services -o yaml
+
+# ログ確認
+render logs -r srv-d5nkspv5r7bs73dqnoug -o yaml
+
+# 手動デプロイ
+render deploys create -r srv-d5nkspv5r7bs73dqnoug
+```
+
 ---
 
 # AI-DLCとSpec駆動開発
