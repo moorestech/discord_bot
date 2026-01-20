@@ -23,7 +23,7 @@ const TARGET_FORUM_CHANNEL_IDS: string[] = [
 const THREAD_ADD_ROLE_NAME = 'twee-add';
 
 export const client = new Client({
-  intents: [GatewayIntentBits.Guilds],
+  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers],
 });
 
 // ready イベント
@@ -79,6 +79,17 @@ client.on(Events.ThreadCreate, async (thread, newlyCreated) => {
         `[thread:${thread.id}] Role "${THREAD_ADD_ROLE_NAME}" not found`
       );
       return;
+    }
+
+    // スレッド作成者にtwee-addロールがなければ付与
+    if (thread.ownerId) {
+      const owner = await thread.guild.members.fetch(thread.ownerId).catch(() => null);
+      if (owner && !owner.roles.cache.has(role.id)) {
+        await owner.roles.add(role);
+        console.log(
+          `[thread:${thread.id}] Added role "${THREAD_ADD_ROLE_NAME}" to thread owner ${owner.user.tag}`
+        );
+      }
     }
 
     console.log(
