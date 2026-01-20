@@ -81,17 +81,16 @@ client.on(Events.ThreadCreate, async (thread, newlyCreated) => {
       return;
     }
 
-    // スレッドの全メンバーを取得し、twee-addロールがなければ付与
-    const threadMembers = await thread.members.fetch();
-    for (const [, threadMember] of threadMembers) {
+    // サーバーの全メンバーを取得し、twee-addロールがなければ付与
+    const allMembers = await thread.guild.members.fetch();
+    for (const [, member] of allMembers) {
       // botは除外
-      if (threadMember.user?.bot) continue;
+      if (member.user.bot) continue;
 
-      const guildMember = await thread.guild.members.fetch(threadMember.id).catch(() => null);
-      if (guildMember && !guildMember.roles.cache.has(role.id)) {
-        await guildMember.roles.add(role);
+      if (!member.roles.cache.has(role.id)) {
+        await member.roles.add(role);
         console.log(
-          `[thread:${thread.id}] Added role "${THREAD_ADD_ROLE_NAME}" to member ${guildMember.user.tag}`
+          `[thread:${thread.id}] Added role "${THREAD_ADD_ROLE_NAME}" to member ${member.user.tag}`
         );
       }
     }
