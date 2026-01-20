@@ -13,6 +13,7 @@ import { config } from "../config";
  */
 const TARGET_FORUM_CHANNEL_IDS: string[] = [
   '1208765744599269386',
+  '1463135499140202517',
 ];
 
 /**
