@@ -5,7 +5,6 @@ import {
   GatewayIntentBits,
   Interaction,
   MessageFlags,
-  PermissionsBitField,
   ThreadChannel,
 } from "discord.js";
 import { config } from "../config";
@@ -19,16 +18,12 @@ const TARGET_FORUM_CHANNEL_IDS: string[] = [
 ];
 
 /**
- * 追加操作の間隔(ms)
- * レート制限を避けるため、0にしない方が安全
+ * スレッド追加通知用のロール名
  */
-const ADD_DELAY_MS = 350;
-
-// Discordの仕様: スレッドに追加できるメンバーは最大1000人
-const MAX_THREAD_MEMBERS = 1000;
+const THREAD_ADD_ROLE_NAME = 'twee-add';
 
 export const client = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers],
+  intents: [GatewayIntentBits.Guilds],
 });
 
 // ready イベント
@@ -74,82 +69,38 @@ client.on(Events.ThreadCreate, async (thread, newlyCreated) => {
     // スレッドにbot自身が入ってないと操作できないケースがあるので join
     await thread.join().catch(() => null);
 
-    // すべてのメンバー取得（GuildMembers Intent が必要）
-    const allMembers = await thread.guild.members.fetch();
-
-    // そのフォーラムを閲覧できる人だけ対象（見えない人を追加しようとしても失敗しがち）
-    const eligible = allMembers.filter(
-      (m) =>
-        !m.user.bot &&
-        m.permissionsIn(parent).has(PermissionsBitField.Flags.ViewChannel)
+    // ロールを検索
+    const role = thread.guild.roles.cache.find(
+      (r) => r.name === THREAD_ADD_ROLE_NAME
     );
 
-    // 既に居る人数が取れれば考慮（取れなければ0扱い）
-    const currentCount =
-      typeof thread.memberCount === "number" ? thread.memberCount : 0;
-
-    // 上限1000まで（現在数を引いた分だけ追加を試みる）
-    const maxToAdd = Math.max(0, MAX_THREAD_MEMBERS - currentCount);
-
-    console.log(
-      `[thread:${thread.id}] forum=${thread.parentId} eligible=${eligible.size} current=${currentCount} willTryAddUpTo=${maxToAdd}`
-    );
-
-    let added = 0;
-
-    for (const member of eligible.values()) {
-      if (added >= maxToAdd) break;
-
-      try {
-        await addUserToThreadQuietly(thread, member.id);
-        added++;
-      } catch (err: unknown) {
-        const error = err as { code?: number; message?: string };
-        const code = error?.code;
-        const msg = String(error?.message ?? "");
-
-        // 代表的な失敗をハンドリング
-        if (
-          code === 50035 ||
-          /maximum.*thread.*member/i.test(msg) ||
-          /Maximum number of thread members/i.test(msg)
-        ) {
-          console.warn(`[thread:${thread.id}] hit member limit; stopping.`);
-          break;
-        }
-
-        if (code === 50013 || /Missing Permissions/i.test(msg)) {
-          console.error(
-            `[thread:${thread.id}] Missing permissions to add members.`
-          );
-          break;
-        }
-
-        console.warn(
-          `[thread:${thread.id}] add failed member=${member.id} code=${code} msg=${msg}`
-        );
-      }
-
-      if (ADD_DELAY_MS > 0) await sleep(ADD_DELAY_MS);
+    if (!role) {
+      console.warn(
+        `[thread:${thread.id}] Role "${THREAD_ADD_ROLE_NAME}" not found`
+      );
+      return;
     }
 
-    console.log(`[thread:${thread.id}] done. added=${added}`);
+    console.log(
+      `[thread:${thread.id}] forum=${thread.parentId} mentioning role=${role.name} (${role.id})`
+    );
+
+    // 空投稿→編集でロールメンション→即削除（サイレント追加）
+    await addRoleToThreadQuietly(thread, role.id);
+
+    console.log(`[thread:${thread.id}] done.`);
   } catch (e) {
     console.error(`[thread:${thread.id}] handler error`, e);
   }
 });
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 /**
- * 空投稿→編集でメンション→即削除でサイレントにスレッドへ追加
- * 通知を出さずにメンバーをスレッドに参加させる非公式ワークアラウンド
+ * 空投稿→編集でロールメンション→即削除でサイレントにスレッドへ追加
+ * 通知を出さずにロールメンバーをスレッドに参加させる非公式ワークアラウンド
  */
-async function addUserToThreadQuietly(
+async function addRoleToThreadQuietly(
   thread: ThreadChannel,
-  userId: string
+  roleId: string
 ): Promise<void> {
   // 1) ゼロ幅スペースで空に近いメッセージを送信（誰もメンションしない）
   const msg = await thread.send({
@@ -158,10 +109,10 @@ async function addUserToThreadQuietly(
     flags: MessageFlags.SuppressNotifications,
   });
 
-  // 2) 編集でメンションを付与（編集はping通知が出にくい）
+  // 2) 編集でロールメンションを付与（編集はping通知が出にくい）
   await msg.edit({
-    content: `<@${userId}>`,
-    allowedMentions: { users: [userId], parse: [] },
+    content: `<@&${roleId}>`,
+    allowedMentions: { roles: [roleId], parse: [] },
   });
 
   // 3) すぐ削除（スレッドの見た目を汚さない）
