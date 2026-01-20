@@ -18,9 +18,9 @@ const TARGET_FORUM_CHANNEL_IDS: string[] = [
 ];
 
 /**
- * スレッド追加通知用のロール名
+ * 1回のメンションで追加する人数（100人以上のロールメンションは機能しないため分割）
  */
-const THREAD_ADD_ROLE_NAME = 'twee-add';
+const BATCH_SIZE = 10;
 
 export const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers],
@@ -69,50 +69,25 @@ client.on(Events.ThreadCreate, async (thread, newlyCreated) => {
     // スレッドにbot自身が入ってないと操作できないケースがあるので join
     await thread.join().catch(() => null);
 
-    // ロールを検索
-    const role = thread.guild.roles.cache.find(
-      (r) => r.name === THREAD_ADD_ROLE_NAME
-    );
-
-    if (!role) {
-      console.warn(
-        `[thread:${thread.id}] Role "${THREAD_ADD_ROLE_NAME}" not found`
-      );
-      return;
-    }
-
-    // サーバーの全メンバーを取得し、twee-addロールがなければ付与
+    // サーバーの全メンバーを取得（botを除く）
     const allMembers = await thread.guild.members.fetch();
-    for (const [, member] of allMembers) {
-      // botは除外
-      if (member.user.bot) continue;
-
-      if (!member.roles.cache.has(role.id)) {
-        await member.roles.add(role);
-        console.log(
-          `[thread:${thread.id}] Added role "${THREAD_ADD_ROLE_NAME}" to member ${member.user.tag}`
-        );
-      }
-    }
-
-    // twee-addロールを持つメンバーを取得
-    const membersWithRole = allMembers.filter(
-      (m) => !m.user.bot && m.roles.cache.has(role.id)
-    );
+    const targetMembers = allMembers.filter((m) => !m.user.bot);
+    const memberIds = [...targetMembers.keys()];
 
     console.log(
-      `[thread:${thread.id}] forum=${thread.parentId} adding ${membersWithRole.size} members with role=${role.name}`
+      `[thread:${thread.id}] forum=${thread.parentId} adding ${memberIds.length} members in batches of ${BATCH_SIZE}`
     );
 
-    // 1人ずつメンション→削除を繰り返す（100人以上のロールメンションは機能しないため）
+    // 10人ずつメンション→削除を繰り返す
     let added = 0;
-    for (const [, member] of membersWithRole) {
+    for (let i = 0; i < memberIds.length; i += BATCH_SIZE) {
+      const batch = memberIds.slice(i, i + BATCH_SIZE);
       try {
-        await addUserToThreadQuietly(thread, member.id);
-        added++;
+        await addUsersToThreadQuietly(thread, batch);
+        added += batch.length;
       } catch (err) {
         console.warn(
-          `[thread:${thread.id}] Failed to add member ${member.user.tag}:`,
+          `[thread:${thread.id}] Failed to add batch starting at ${i}:`,
           err
         );
       }
@@ -125,12 +100,12 @@ client.on(Events.ThreadCreate, async (thread, newlyCreated) => {
 });
 
 /**
- * 空投稿→編集でユーザーメンション→即削除でサイレントにスレッドへ追加
+ * 空投稿→編集で複数ユーザーメンション→即削除でサイレントにスレッドへ追加
  * 通知を出さずにメンバーをスレッドに参加させる非公式ワークアラウンド
  */
-async function addUserToThreadQuietly(
+async function addUsersToThreadQuietly(
   thread: ThreadChannel,
-  userId: string
+  userIds: string[]
 ): Promise<void> {
   // 1) ゼロ幅スペースで空に近いメッセージを送信（誰もメンションしない）
   const msg = await thread.send({
@@ -139,10 +114,11 @@ async function addUserToThreadQuietly(
     flags: MessageFlags.SuppressNotifications,
   });
 
-  // 2) 編集でユーザーメンションを付与（編集はping通知が出にくい）
+  // 2) 編集で複数ユーザーメンションを付与（編集はping通知が出にくい）
+  const mentions = userIds.map((id) => `<@${id}>`).join(" ");
   await msg.edit({
-    content: `<@${userId}>`,
-    allowedMentions: { users: [userId], parse: [] },
+    content: mentions,
+    allowedMentions: { users: userIds, parse: [] },
   });
 
   // 3) すぐ削除（スレッドの見た目を汚さない）
