@@ -95,26 +95,42 @@ client.on(Events.ThreadCreate, async (thread, newlyCreated) => {
       }
     }
 
-    console.log(
-      `[thread:${thread.id}] forum=${thread.parentId} mentioning role=${role.name} (${role.id})`
+    // twee-addロールを持つメンバーを取得
+    const membersWithRole = allMembers.filter(
+      (m) => !m.user.bot && m.roles.cache.has(role.id)
     );
 
-    // 空投稿→編集でロールメンション→即削除（サイレント追加）
-    await addRoleToThreadQuietly(thread, role.id);
+    console.log(
+      `[thread:${thread.id}] forum=${thread.parentId} adding ${membersWithRole.size} members with role=${role.name}`
+    );
 
-    console.log(`[thread:${thread.id}] done.`);
+    // 1人ずつメンション→削除を繰り返す（100人以上のロールメンションは機能しないため）
+    let added = 0;
+    for (const [, member] of membersWithRole) {
+      try {
+        await addUserToThreadQuietly(thread, member.id);
+        added++;
+      } catch (err) {
+        console.warn(
+          `[thread:${thread.id}] Failed to add member ${member.user.tag}:`,
+          err
+        );
+      }
+    }
+
+    console.log(`[thread:${thread.id}] done. added=${added}`);
   } catch (e) {
     console.error(`[thread:${thread.id}] handler error`, e);
   }
 });
 
 /**
- * 空投稿→編集でロールメンション→即削除でサイレントにスレッドへ追加
- * 通知を出さずにロールメンバーをスレッドに参加させる非公式ワークアラウンド
+ * 空投稿→編集でユーザーメンション→即削除でサイレントにスレッドへ追加
+ * 通知を出さずにメンバーをスレッドに参加させる非公式ワークアラウンド
  */
-async function addRoleToThreadQuietly(
+async function addUserToThreadQuietly(
   thread: ThreadChannel,
-  roleId: string
+  userId: string
 ): Promise<void> {
   // 1) ゼロ幅スペースで空に近いメッセージを送信（誰もメンションしない）
   const msg = await thread.send({
@@ -123,10 +139,10 @@ async function addRoleToThreadQuietly(
     flags: MessageFlags.SuppressNotifications,
   });
 
-  // 2) 編集でロールメンションを付与（編集はping通知が出にくい）
+  // 2) 編集でユーザーメンションを付与（編集はping通知が出にくい）
   await msg.edit({
-    content: `<@&${roleId}>`,
-    allowedMentions: { roles: [roleId], parse: [] },
+    content: `<@${userId}>`,
+    allowedMentions: { users: [userId], parse: [] },
   });
 
   // 3) すぐ削除（スレッドの見た目を汚さない）
