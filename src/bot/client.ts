@@ -4,6 +4,7 @@ import {
   Events,
   GatewayIntentBits,
   Interaction,
+  Message,
   MessageFlags,
   ThreadChannel,
 } from "discord.js";
@@ -78,12 +79,19 @@ client.on(Events.ThreadCreate, async (thread, newlyCreated) => {
       `[thread:${thread.id}] forum=${thread.parentId} adding ${memberIds.length} members in batches of ${BATCH_SIZE}`
     );
 
-    // 10人ずつメンション→削除を繰り返す
+    // 最初に1つの空メッセージを作成
+    let botMessage: Message | null = await thread.send({
+      content: "\u200B",
+      allowedMentions: { parse: [] },
+      flags: MessageFlags.SuppressNotifications,
+    });
+
+    // 10人ずつ同じメッセージを編集して追加
     let added = 0;
     for (let i = 0; i < memberIds.length; i += BATCH_SIZE) {
       const batch = memberIds.slice(i, i + BATCH_SIZE);
       try {
-        await addUsersToThreadQuietly(thread, batch);
+        botMessage = await addUsersToThreadQuietly(thread, batch, botMessage);
         added += batch.length;
       } catch (err) {
         console.warn(
@@ -135,8 +143,10 @@ client.on(Events.GuildMemberAdd, async (member) => {
     for (const thread of threads) {
       try {
         await thread.join().catch(() => null);
-        await addUsersToThreadQuietly(thread, [member.id]);
-        console.log(`[GuildMemberAdd] Added ${member.user.tag} to thread ${thread.name}`);
+        // 既存のボットメッセージを探索して編集、なければ新規作成
+        const existingMessage = await findBotMessageInThread(thread);
+        await addUsersToThreadQuietly(thread, [member.id], existingMessage);
+        console.log(`[GuildMemberAdd] Added ${member.user.tag} to thread ${thread.name} (${existingMessage ? 'edited existing' : 'created new'})`);
       } catch (err) {
         console.warn(`[GuildMemberAdd] Failed to add to thread ${thread.id}:`, err);
       }
@@ -149,29 +159,49 @@ client.on(Events.GuildMemberAdd, async (member) => {
 });
 
 /**
- * 空投稿→編集で複数ユーザーメンション→即削除でサイレントにスレッドへ追加
+ * スレッド内でボットが投稿した既存メッセージを古い順から探索
+ */
+async function findBotMessageInThread(thread: ThreadChannel): Promise<Message | null> {
+  // after: '0' で古い順から取得（スレッド作成時の最初のメッセージを優先的に見つける）
+  const messages = await thread.messages.fetch({ limit: 50, after: '0' });
+  const botMessage = messages.find(m => m.author.id === thread.client.user?.id);
+  return botMessage ?? null;
+}
+
+/**
+ * 編集で複数ユーザーメンションを付与してサイレントにスレッドへ追加
  * 通知を出さずにメンバーをスレッドに参加させる非公式ワークアラウンド
+ * 既存メッセージがあれば編集、なければ新規作成
  */
 async function addUsersToThreadQuietly(
   thread: ThreadChannel,
-  userIds: string[]
-): Promise<void> {
-  // 1) ゼロ幅スペースで空に近いメッセージを送信（誰もメンションしない）
+  userIds: string[],
+  existingMessage?: Message | null
+): Promise<Message> {
+  const mentions = userIds.map((id) => `<@${id}>`).join(" ");
+
+  if (existingMessage) {
+    // 既存メッセージを編集
+    await existingMessage.edit({
+      content: mentions,
+      allowedMentions: { users: userIds, parse: [] },
+    });
+    return existingMessage;
+  }
+
+  // 新規メッセージを作成して編集
   const msg = await thread.send({
     content: "\u200B",
     allowedMentions: { parse: [] },
     flags: MessageFlags.SuppressNotifications,
   });
 
-  // 2) 編集で複数ユーザーメンションを付与（編集はping通知が出にくい）
-  const mentions = userIds.map((id) => `<@${id}>`).join(" ");
   await msg.edit({
     content: mentions,
     allowedMentions: { users: userIds, parse: [] },
   });
 
-  // 3) すぐ削除（スレッドの見た目を汚さない）
-  await msg.delete().catch(() => null);
+  return msg;
 }
 
 export async function startBot(): Promise<void> {
