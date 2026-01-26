@@ -21,7 +21,8 @@ export function registerMessageCreateHandler(client: Client): void {
     }
 
     try {
-      await message.channel.send(content + " ");
+      // ゼロ幅スペースを追加（絵文字のみのメッセージが大きく表示されるのを防ぐ）
+      await message.channel.send(content + "\u200B");
       console.log(
         `[messageCreate:hr] Responded to ${message.author.tag} in channel ${message.channel.id}`
       );
