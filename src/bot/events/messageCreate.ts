@@ -21,7 +21,7 @@ export function registerMessageCreateHandler(client: Client): void {
     }
 
     try {
-      await message.channel.send(content);
+      await message.channel.send(content + " ");
       console.log(
         `[messageCreate:hr] Responded to ${message.author.tag} in channel ${message.channel.id}`
       );
