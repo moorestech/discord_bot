@@ -1,6 +1,6 @@
 import { HrApiResponse } from "../types/api";
 
-const HR_API_URL = "https://and-and-and-and.com/twee/api/index.json";
+const HR_API_URL = "https://script.googleusercontent.com/macros/echo?user_content_key=AehSKLjCg0RJTkAKMMuwTyQSt1zIYs03vVYpqjGC31ElFgA8w6inYmyiEzZQmdfN_XOMpQj7zHIx6zG_-FoWkZojFQ9A8TWGBdY35AM0Dh1xLgyd4-CR73tWB06y74kDmetXd08qGQfVZOWOZSYLszpjgmE6wRGKv0wYnrzi1apnf7BZDKojXb1qLZNmIzGCh92Bge0q4XPy3PLoH47zzyiI3T4w1TWVLbLaeNqpXu5nV1kBDoQNUSugrHpVtXmfLagVZ66p7ab_jH7ycwaRO-3LPEcmyO0X0Q&lib=M6TxFyLvMO3bIO7aCRiswAgrpsbzMODYD";
 const CACHE_UPDATE_INTERVAL_MS = 60 * 1000; // 1分
 
 class HrContentService {
