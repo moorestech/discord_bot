@@ -14,7 +14,10 @@ const HELP_JA_MESSAGE = `**このボットの機能**
   hrの内容は自由に追加できます
   追加はこのスプレッドシートのA列に追加してください：
   <https://docs.google.com/spreadsheets/d/1mUq2SPF7O4I2HH9zROUI1y9m3x8GVTQznJLc-opvrM0/edit?usp=sharing>
-  ※反映まで2〜3分程度かかります`;
+  ※反映まで2〜3分程度かかります
+
+• **定期メッセージ送信**
+  設定ファイル（scheduled-messages.yaml）に基づいて、指定チャンネルに定期的にメッセージを自動送信します`;
 
 const HELP_EN_MESSAGE = `**Bot Features**
 
@@ -30,7 +33,10 @@ const HELP_EN_MESSAGE = `**Bot Features**
   You can freely add hr content
   Add entries to column A in this spreadsheet:
   <https://docs.google.com/spreadsheets/d/1mUq2SPF7O4I2HH9zROUI1y9m3x8GVTQznJLc-opvrM0/edit?usp=sharing>
-  *Changes take 2-3 minutes to reflect`;
+  *Changes take 2-3 minutes to reflect
+
+• **Scheduled messages**
+  Automatically sends messages to specified channels at regular intervals based on the config file (scheduled-messages.yaml)`;
 
 export function registerInteractionCreateHandler(client: Client): void {
   client.on("interactionCreate", async (interaction: Interaction) => {
