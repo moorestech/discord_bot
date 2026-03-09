@@ -2,7 +2,7 @@ schedules:
    - channel_id: "1158366632725446736"
      start: "2025-02-07T09:35:00+09:00"
      interval: "7d"
-     message: "@sakastudio bot test"
+     message: "<@&1479312720586342543> bot test"
 
   # - channel_id: "987654321098765432"
   #   start: "2025-01-01T12:00:00+09:00"
