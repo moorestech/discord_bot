@@ -175,7 +175,10 @@ class ScheduledMessageService {
             continue;
           }
 
-          await (channel as TextChannel).send(schedule.message);
+          await (channel as TextChannel).send({
+            content: schedule.message,
+            allowedMentions: { parse: ["roles"] },
+          });
           this.lastSentMap.set(i, now);
           console.log(
             `[ScheduledMessageService] Sent message to channel ${schedule.channel_id}`
