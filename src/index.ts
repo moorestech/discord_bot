@@ -8,15 +8,17 @@ async function main(): Promise<void> {
   // 1. Webサーバを起動
   await startWebServer();
 
-  // 2. スラッシュコマンドを登録
-  await registerCommands();
-
-  // 3. Discord botを起動
+  // 2. Discord botを起動（先にオンラインにする）
   await startBot();
 
-  // 4. 起動完了をヘルスチェックに通知
+  // 3. 起動完了をヘルスチェックに通知
   markStartupComplete();
   console.log("Application started successfully");
+
+  // 4. スラッシュコマンドをバックグラウンドで登録（既存コマンドは引き続き動作する）
+  registerCommands().catch((error) => {
+    console.error("Failed to register commands (non-fatal):", error);
+  });
 }
 
 // グレースフルシャットダウン
