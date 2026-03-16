@@ -1,4 +1,4 @@
-import { startWebServer, stopWebServer } from "./web/server";
+import { startWebServer, stopWebServer, markStartupComplete } from "./web/server";
 import { registerCommands } from "./bot/register";
 import { startBot, stopBot } from "./bot/client";
 
@@ -14,6 +14,8 @@ async function main(): Promise<void> {
   // 3. Discord botを起動
   await startBot();
 
+  // 4. 起動完了をヘルスチェックに通知
+  markStartupComplete();
   console.log("Application started successfully");
 }
 

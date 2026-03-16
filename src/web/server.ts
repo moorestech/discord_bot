@@ -5,8 +5,14 @@ import { client } from "../bot/client";
 
 const app: Application = express();
 let server: Server | null = null;
-const startedAt = Date.now();
-const STARTUP_GRACE_MS = 2 * 60 * 1000; // 起動後2分間は猶予
+let startupComplete = false;
+
+/**
+ * 起動完了を通知する。main()の最後で呼ぶ。
+ */
+export function markStartupComplete(): void {
+  startupComplete = true;
+}
 
 // GET / - 簡易ページ
 app.get("/", (_req: Request, res: Response) => {
@@ -15,10 +21,14 @@ app.get("/", (_req: Request, res: Response) => {
 
 // GET /healthz - 監視/Keep-Alive用（Discord接続状態も確認）
 app.get("/healthz", (_req: Request, res: Response) => {
-  const isDiscordReady = client.isReady();
-  const isStartingUp = Date.now() - startedAt < STARTUP_GRACE_MS;
+  // 起動中はまだDiscord未接続でも200を返す
+  if (!startupComplete) {
+    res.status(200).send("ok (starting up)");
+    return;
+  }
 
-  if (isDiscordReady || isStartingUp) {
+  // 起動完了後はDiscord接続を確認
+  if (client.isReady()) {
     res.status(200).send("ok");
   } else {
     console.warn("[HealthCheck] Discord client is not ready, returning 503");
