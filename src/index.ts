@@ -2,22 +2,14 @@ import { startWebServer, stopWebServer, markStartupComplete } from "./web/server
 import { registerCommands } from "./bot/register";
 import { startBot, stopBot } from "./bot/client";
 
-const LOGIN_TIMEOUT_MS = 5 * 60 * 1000; // 5分
-
 async function main(): Promise<void> {
   console.log("Starting application...");
 
   // 1. Webサーバを起動
   await startWebServer();
 
-  // 2. Discord botを起動（タイムアウト付き）
-  const loginTimeout = setTimeout(() => {
-    console.error("[FATAL] client.login() timed out after 5 minutes, exiting...");
-    process.exit(1);
-  }, LOGIN_TIMEOUT_MS);
-
+  // 2. Discord botを起動（レート制限時は長時間かかる場合がある）
   await startBot();
-  clearTimeout(loginTimeout);
 
   // 3. 起動完了をヘルスチェックに通知
   markStartupComplete();
