@@ -25,7 +25,16 @@ export async function startBot(): Promise<void> {
     scheduledMessageService.initialize(client);
   });
 
+  // デバッグ用イベントリスナー
+  client.on("warn", (msg) => console.warn("[Discord WARN]", msg));
+  client.on("error", (err) => console.error("[Discord ERROR]", err));
+  client.on("shardError", (err) => console.error("[Discord SHARD ERROR]", err));
+  client.on("shardDisconnect", (ev, id) => console.warn(`[Discord] Shard ${id} disconnected`));
+  client.on("shardReconnecting", (id) => console.log(`[Discord] Shard ${id} reconnecting...`));
+
+  console.log("[startBot] Calling client.login()...");
   await client.login(config.discordToken);
+  console.log("[startBot] client.login() resolved");
 }
 
 export function stopBot(): void {
