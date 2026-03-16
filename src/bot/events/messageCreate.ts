@@ -3,6 +3,8 @@ import { hrContentService } from "../../services/hrContentService";
 
 export function registerMessageCreateHandler(client: Client): void {
   client.on(Events.MessageCreate, async (message: Message) => {
+    console.log(`[messageCreate] Received message from ${message.author.tag}: "${message.content}" (bot: ${message.author.bot}, guild: ${message.guild?.id}, channel: ${message.channel.id})`);
+
     // botのメッセージは無視
     if (message.author.bot) return;
 
