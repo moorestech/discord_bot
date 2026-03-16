@@ -32,6 +32,14 @@ export async function startBot(): Promise<void> {
   client.on("shardDisconnect", (ev, id) => console.warn(`[Discord] Shard ${id} disconnected`));
   client.on("shardReconnecting", (id) => console.log(`[Discord] Shard ${id} reconnecting...`));
 
+  // REST APIデバッグ
+  client.rest.on("rateLimited", (info) => {
+    console.warn("[Discord REST] Rate limited:", JSON.stringify(info));
+  });
+  client.rest.on("response", (req, res) => {
+    console.log(`[Discord REST] ${req.method} ${req.path} -> ${res.status}`);
+  });
+
   console.log("[startBot] Calling client.login()...");
   await client.login(config.discordToken);
   console.log("[startBot] client.login() resolved");

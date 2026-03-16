@@ -1,5 +1,4 @@
 import { startWebServer, stopWebServer, markStartupComplete } from "./web/server";
-import { registerCommands } from "./bot/register";
 import { startBot, stopBot } from "./bot/client";
 
 async function main(): Promise<void> {
@@ -15,10 +14,8 @@ async function main(): Promise<void> {
   markStartupComplete();
   console.log("Application started successfully");
 
-  // 4. スラッシュコマンドをバックグラウンドで登録（既存コマンドは引き続き動作する）
-  registerCommands().catch((error) => {
-    console.error("Failed to register commands (non-fatal):", error);
-  });
+  // コマンド登録は起動時には行わない（既に登録済み）
+  // 新しいコマンドを追加した場合のみ、一時的に有効化すること
 }
 
 // グレースフルシャットダウン
