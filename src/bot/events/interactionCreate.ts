@@ -44,12 +44,18 @@ export function registerInteractionCreateHandler(client: Client): void {
 
     const { commandName } = interaction;
 
-    if (commandName === "help-ja") {
-      console.log(`Received /help-ja command from ${interaction.user.tag}`);
-      await interaction.reply(HELP_JA_MESSAGE);
-    } else if (commandName === "help-en") {
-      console.log(`Received /help-en command from ${interaction.user.tag}`);
-      await interaction.reply(HELP_EN_MESSAGE);
+    try {
+      if (commandName === "help-ja") {
+        console.log(`Received /help-ja command from ${interaction.user.tag}`);
+        await interaction.reply(HELP_JA_MESSAGE);
+        console.log(`Replied to /help-ja from ${interaction.user.tag}`);
+      } else if (commandName === "help-en") {
+        console.log(`Received /help-en command from ${interaction.user.tag}`);
+        await interaction.reply(HELP_EN_MESSAGE);
+        console.log(`Replied to /help-en from ${interaction.user.tag}`);
+      }
+    } catch (error) {
+      console.error(`[interactionCreate] Failed to reply to /${commandName}:`, error);
     }
   });
 }
