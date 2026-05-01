@@ -1,0 +1,104 @@
+name: Deploy to Lightsail
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-lightsail
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build TypeScript
+        run: npm run build
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.LIGHTSAIL_SSH_KEY }}" > ~/.ssh/discord-bot-key
+          chmod 600 ~/.ssh/discord-bot-key
+          ssh-keyscan -H "${{ secrets.LIGHTSAIL_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Sync files to instance
+        env:
+          SSH_HOST: ${{ secrets.LIGHTSAIL_HOST }}
+          SSH_USER: ec2-user
+          SSH_OPTS: -i ~/.ssh/discord-bot-key -o StrictHostKeyChecking=yes
+        run: |
+          ssh $SSH_OPTS "$SSH_USER@$SSH_HOST" "mkdir -p /tmp/discord-bot-deploy/dist"
+
+          rsync -avz --delete \
+            -e "ssh $SSH_OPTS" \
+            dist/ \
+            "$SSH_USER@$SSH_HOST:/tmp/discord-bot-deploy/dist/"
+
+          rsync -avz \
+            -e "ssh $SSH_OPTS" \
+            package.json \
+            package-lock.json \
+            "$SSH_USER@$SSH_HOST:/tmp/discord-bot-deploy/"
+
+          for yaml_file in *.yaml; do
+            [ -f "$yaml_file" ] && rsync -avz \
+              -e "ssh $SSH_OPTS" \
+              "$yaml_file" \
+              "$SSH_USER@$SSH_HOST:/tmp/discord-bot-deploy/"
+          done
+
+      - name: Deploy and restart service
+        env:
+          SSH_HOST: ${{ secrets.LIGHTSAIL_HOST }}
+          SSH_USER: ec2-user
+          SSH_OPTS: -i ~/.ssh/discord-bot-key -o StrictHostKeyChecking=yes
+        run: |
+          ssh $SSH_OPTS "$SSH_USER@$SSH_HOST" bash << 'REMOTEOF'
+            set -euo pipefail
+
+            sudo rm -rf /opt/discord-bot/dist
+            sudo cp -r /tmp/discord-bot-deploy/dist /opt/discord-bot/dist
+            sudo cp /tmp/discord-bot-deploy/package.json /opt/discord-bot/
+            sudo cp /tmp/discord-bot-deploy/package-lock.json /opt/discord-bot/
+
+            for yaml_file in /tmp/discord-bot-deploy/*.yaml; do
+              [ -f "$yaml_file" ] && sudo cp "$yaml_file" /opt/discord-bot/
+            done
+
+            sudo chown -R discord-bot:discord-bot /opt/discord-bot
+
+            cd /opt/discord-bot
+            if [ ! -d node_modules ] || ! diff -q /tmp/discord-bot-deploy/package-lock.json /opt/discord-bot/.package-lock-installed 2>/dev/null; then
+              echo "Dependencies changed, running npm ci..."
+              sudo -u discord-bot npm ci --omit=dev
+              sudo cp package-lock.json .package-lock-installed
+            else
+              echo "Dependencies unchanged, skipping npm ci"
+            fi
+
+            sudo systemctl restart discord-bot
+            sleep 2
+            sudo systemctl is-active discord-bot
+            sudo systemctl status discord-bot --no-pager
+          REMOTEOF
+
+      - name: Cleanup SSH key
+        if: always()
+        run: rm -f ~/.ssh/discord-bot-key

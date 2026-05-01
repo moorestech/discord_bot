@@ -30,3 +30,15 @@ npm-debug.log*
 venv/
 __pycache__/
 *.pyc
+
+# Terraform
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.backup
+terraform/*.tfstate.*.backup
+terraform/*.tfvars
+!terraform/*.tfvars.example
+terraform/.terraform.lock.hcl
+
+# Claude Code
+.mcp.json
