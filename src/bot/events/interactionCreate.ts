@@ -17,7 +17,10 @@ const HELP_JA_MESSAGE = `**このボットの機能**
   ※反映まで2〜3分程度かかります
 
 • **定期メッセージ送信**
-  設定ファイル（scheduled-messages.yaml）に基づいて、指定チャンネルに定期的にメッセージを自動送信します`;
+  設定ファイル（scheduled-messages.yaml）に基づいて、指定チャンネルに定期的にメッセージを自動送信します
+
+• **timesスレッド自動維持**
+  6時間ごとに指定チャンネルのスレッドをチェックし、自動アーカイブまで残り12時間以内のスレッドにメッセージを投稿して維持します`;
 
 const HELP_EN_MESSAGE = `**Bot Features**
 
@@ -36,7 +39,10 @@ const HELP_EN_MESSAGE = `**Bot Features**
   *Changes take 2-3 minutes to reflect
 
 • **Scheduled messages**
-  Automatically sends messages to specified channels at regular intervals based on the config file (scheduled-messages.yaml)`;
+  Automatically sends messages to specified channels at regular intervals based on the config file (scheduled-messages.yaml)
+
+• **Auto thread keep-alive**
+  Checks threads in a specified channel every 6 hours. If a thread is within 12 hours of being auto-archived, a message is posted to keep it alive`;
 
 export function registerInteractionCreateHandler(client: Client): void {
   client.on("interactionCreate", async (interaction: Interaction) => {
