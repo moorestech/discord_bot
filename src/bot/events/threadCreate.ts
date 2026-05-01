@@ -6,14 +6,7 @@ import {
   MessageFlags,
   ThreadChannel,
 } from "discord.js";
-
-/**
- * 監視したいフォーラムチャンネルIDを配列で設定
- */
-const TARGET_FORUM_CHANNEL_IDS: string[] = [
-  "1208765744599269386",
-  "1463135499140202517",
-];
+import { TARGET_FORUM_CHANNEL_IDS } from "./targetForums";
 
 /**
  * 1回のメンションで追加する人数（100人以上のロールメンションは機能しないため分割）

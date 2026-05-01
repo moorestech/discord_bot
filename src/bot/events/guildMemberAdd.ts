@@ -3,14 +3,7 @@ import {
   addUsersToThreadQuietly,
   findBotMessageInThread,
 } from "./threadCreate";
-
-/**
- * 監視したいフォーラムチャンネルIDを配列で設定
- */
-const TARGET_FORUM_CHANNEL_IDS: string[] = [
-  "1208765744599269386",
-  "1463135499140202517",
-];
+import { TARGET_FORUM_CHANNEL_IDS } from "./targetForums";
 
 export function registerGuildMemberAddHandler(client: Client): void {
   client.on(Events.GuildMemberAdd, async (member) => {
