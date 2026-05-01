@@ -4,7 +4,7 @@
 
 ## プロジェクト概要
 
-moorestech用のDiscordボット。TypeScriptとdiscord.jsで構築。Renderへのデプロイを想定し、keep-alive用のWebサーバーを内蔵。
+moorestech用のDiscordボット。TypeScriptとdiscord.jsで構築。AWS Lightsail Instanceへデプロイ。ヘルスチェック用のWebサーバーを内蔵。
 
 ## コマンド
 
@@ -71,40 +71,55 @@ src/
 - Express 4.x（keep-aliveサーバー）
 - Node.js >= 18
 
-## Renderデプロイ
+## AWS Lightsailデプロイ
 
-**本番URL:** https://moorestech-discord-bot.onrender.com/
+**インフラ:** Terraform管理（`terraform/`）
+**サーバー:** Lightsail Instance（nano: 512MB RAM, 2 vCPU, ~$5/月）
+**OS:** Amazon Linux 2023
+**プロセス管理:** systemd（discord-bot.service）
 
-**エンドポイント:**
-- `/` - ルート（"OK"を返す）
-- `/healthz` - ヘルスチェック用
+**前提条件:**
+- AWS CLI（`aws configure`済み）
+- Terraform
+- SSH鍵ペア
 
-**デプロイ設定（render.yaml）:**
-- ランタイム: Node.js
-- ビルドコマンド: `npm ci --include=dev && npm run build`
-- 開始コマンド: `npm start`
-- プラン: Starter
-
-**Render環境変数（要設定）:**
-- `DISCORD_TOKEN` - ボットトークン
-- `DISCORD_CLIENT_ID` - アプリケーションクライアントID
-- `GUILD_ID` - ギルドID（オプション）
-- `NODE_ENV` - `production`
-
-**デプロイ方法:**
-1. GitHubにpushすると自動デプロイ（autoDeploy有効）
-2. 手動デプロイ: Renderダッシュボードまたは`render deploys create`
-
-**Render CLI:**
+**初回セットアップ:**
 ```bash
-# サービス一覧
-render services -o yaml
+# 1. SSH鍵ペアの生成
+ssh-keygen -t ed25519 -f ~/.ssh/discord-bot-key -C "discord-bot"
 
-# ログ確認
-render logs -r srv-d5nkspv5r7bs73dqnoug -o yaml
+# 2. Terraformの初期化
+cd terraform
+cp terraform.tfvars.example terraform.tfvars
+# terraform.tfvarsにDiscord設定とSSH公開鍵を記入
+terraform init
 
-# 手動デプロイ
-render deploys create -r srv-d5nkspv5r7bs73dqnoug
+# 3. インフラ作成
+terraform apply
+
+# 4. 初回デプロイ（user_data完了まで2-3分待ってから）
+cd ../scripts
+./deploy.sh
+```
+
+**更新時（コード変更後）:**
+```bash
+cd scripts && ./deploy.sh
+```
+
+**運用コマンド:**
+```bash
+# インスタンス状態確認
+aws lightsail get-instance --instance-name moorestech-discord-bot
+
+# SSH接続
+ssh -i ~/.ssh/discord-bot-key ec2-user@<INSTANCE_IP>
+
+# ログ確認（SSH接続後）
+sudo journalctl -u discord-bot -f
+
+# サービス再起動
+sudo systemctl restart discord-bot
 ```
 
 ---

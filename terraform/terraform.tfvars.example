@@ -1,0 +1,16 @@
+# AWS リージョン
+aws_region = "ap-northeast-1"
+
+# インスタンス名
+instance_name = "moorestech-discord-bot"
+
+# バンドル（nano_3_0 = $5/月, 512MB RAM, 2 vCPU）
+bundle_id = "nano_3_0"
+
+# SSH公開鍵（~/.ssh/discord-bot-key.pub の内容を貼り付け）
+ssh_public_key = ""
+
+# Discord設定
+discord_token     = ""
+discord_client_id = ""
+# guild_id        = ""
