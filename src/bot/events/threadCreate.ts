@@ -7,11 +7,7 @@ import {
   ThreadChannel,
 } from "discord.js";
 import { TARGET_FORUM_CHANNEL_IDS } from "./targetForums";
-
-/**
- * 1回のメンションで追加する人数（100人以上のロールメンションは機能しないため分割）
- */
-const BATCH_SIZE = 10;
+import { enqueueAddAllMembersToThread } from "../services/threadMemberAddService";
 
 /**
  * ユーザー追加時に表示する説明メッセージ（日英併記）
@@ -47,41 +43,7 @@ export function registerThreadCreateHandler(client: Client): void {
     }
 
     try {
-      // スレッドにbot自身が入ってないと操作できないケースがあるので join
-      await thread.join().catch(() => null);
-
-      // サーバーの全メンバーを取得（botを除く）
-      const allMembers = await thread.guild.members.fetch();
-      const targetMembers = allMembers.filter((m) => !m.user.bot);
-      const memberIds = [...targetMembers.keys()];
-
-      console.log(
-        `[thread:${thread.id}] forum=${thread.parentId} adding ${memberIds.length} members in batches of ${BATCH_SIZE}`
-      );
-
-      // 最初に1つの空メッセージを作成
-      let botMessage: Message | null = await thread.send({
-        content: "\u200B",
-        allowedMentions: { parse: [] },
-        flags: MessageFlags.SuppressNotifications,
-      });
-
-      // 10人ずつ同じメッセージを編集して追加
-      let added = 0;
-      for (let i = 0; i < memberIds.length; i += BATCH_SIZE) {
-        const batch = memberIds.slice(i, i + BATCH_SIZE);
-        try {
-          botMessage = await addUsersToThreadQuietly(thread, batch, botMessage);
-          added += batch.length;
-        } catch (err) {
-          console.warn(
-            `[thread:${thread.id}] Failed to add batch starting at ${i}:`,
-            err
-          );
-        }
-      }
-
-      console.log(`[thread:${thread.id}] done. added=${added}`);
+      await enqueueAddAllMembersToThread(thread);
     } catch (e) {
       console.error(`[thread:${thread.id}] handler error`, e);
     }
@@ -126,7 +88,7 @@ export async function addUsersToThreadQuietly(
 
   // 新規メッセージを作成して編集
   const msg = await thread.send({
-    content: "\u200B",
+    content: "​",
     allowedMentions: { parse: [] },
     flags: MessageFlags.SuppressNotifications,
   });

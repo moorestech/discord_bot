@@ -1,4 +1,5 @@
-import { Client, Interaction } from "discord.js";
+import { Client, Interaction, MessageFlags, PermissionFlagsBits } from "discord.js";
+import { enqueueAddAllMembersToThread } from "../services/threadMemberAddService";
 
 const HELP_JA_MESSAGE = `**このボットの機能**
 
@@ -20,7 +21,10 @@ const HELP_JA_MESSAGE = `**このボットの機能**
   設定ファイル（scheduled-messages.yaml）に基づいて、指定チャンネルに定期的にメッセージを自動送信します
 
 • **timesスレッド自動維持**
-  6時間ごとに指定チャンネルのスレッドをチェックし、自動アーカイブまで残り12時間以内のスレッドにメッセージを投稿して維持します`;
+  6時間ごとに指定チャンネルのスレッドをチェックし、自動アーカイブまで残り12時間以内のスレッドにメッセージを投稿して維持します
+
+• **スレッドに全員を追加（管理者専用）**
+  \`/add-all-to-thread\` で指定スレッドにサーバー全メンバーを追加します`;
 
 const HELP_EN_MESSAGE = `**Bot Features**
 
@@ -42,7 +46,10 @@ const HELP_EN_MESSAGE = `**Bot Features**
   Automatically sends messages to specified channels at regular intervals based on the config file (scheduled-messages.yaml)
 
 • **Auto thread keep-alive**
-  Checks threads in a specified channel every 6 hours. If a thread is within 12 hours of being auto-archived, a message is posted to keep it alive`;
+  Checks threads in a specified channel every 6 hours. If a thread is within 12 hours of being auto-archived, a message is posted to keep it alive
+
+• **Add all members to a thread (admin only)**
+  Use \`/add-all-to-thread\` to add every server member to the specified thread`;
 
 export function registerInteractionCreateHandler(client: Client): void {
   client.on("interactionCreate", async (interaction: Interaction) => {
@@ -59,9 +66,57 @@ export function registerInteractionCreateHandler(client: Client): void {
         console.log(`Received /help-en command from ${interaction.user.tag}`);
         await interaction.reply(HELP_EN_MESSAGE);
         console.log(`Replied to /help-en from ${interaction.user.tag}`);
+      } else if (commandName === "add-all-to-thread") {
+        await handleAddAllToThread(interaction);
       }
     } catch (error) {
       console.error(`[interactionCreate] Failed to reply to /${commandName}:`, error);
     }
   });
+}
+
+async function handleAddAllToThread(
+  interaction: import("discord.js").ChatInputCommandInteraction
+): Promise<void> {
+  console.log(
+    `Received /add-all-to-thread command from ${interaction.user.tag}`
+  );
+
+  if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
+    await interaction.reply({
+      content: "このコマンドは管理者のみ実行できます。",
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
+  const channel = interaction.options.getChannel("thread", true);
+  const resolved = interaction.guild?.channels.cache.get(channel.id) ?? null;
+  if (!resolved || !resolved.isThread()) {
+    await interaction.reply({
+      content: "スレッドを指定してください。",
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
+  await interaction.deferReply();
+
+  try {
+    const { added, total } = await enqueueAddAllMembersToThread(resolved);
+    await interaction.editReply(
+      `<#${resolved.id}> に ${added}/${total} 人を追加しました。`
+    );
+    console.log(
+      `[add-all-to-thread] ${interaction.user.tag} added ${added}/${total} to ${resolved.id}`
+    );
+  } catch (e) {
+    console.error(
+      `[add-all-to-thread] failed for ${resolved.id}:`,
+      e
+    );
+    await interaction.editReply(
+      `エラーが発生しました: ${e instanceof Error ? e.message : String(e)}`
+    );
+  }
 }
