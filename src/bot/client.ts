@@ -4,6 +4,7 @@ import { registerEventHandlers } from "./events";
 import { hrContentService } from "../services/hrContentService";
 import { scheduledMessageService } from "../services/scheduledMessageService";
 import { threadKeepAliveService } from "../services/threadKeepAliveService";
+import { threadMemberSyncService } from "../services/threadMemberSyncService";
 
 export const client = new Client({
   intents: [
@@ -25,6 +26,7 @@ export async function startBot(): Promise<void> {
   client.once("ready", () => {
     scheduledMessageService.initialize(client);
     threadKeepAliveService.initialize(client);
+    threadMemberSyncService.initialize(client);
   });
 
   // デバッグ用イベントリスナー
@@ -58,6 +60,9 @@ export function stopBot(): void {
 
   // スレッドkeep-aliveサービスを停止
   threadKeepAliveService.stop();
+
+  // スレッドメンバー同期サービスを停止
+  threadMemberSyncService.stop();
 
   client.destroy();
   console.log("Discord bot stopped");
