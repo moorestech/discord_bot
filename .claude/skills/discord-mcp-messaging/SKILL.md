@@ -57,8 +57,5 @@ ToolSearch({ query: "select:mcp__discord__discord_list_servers,mcp__discord__dis
 
 ## Gotchas
 
-- **同名チャンネル問題**: 多言語 Discord サーバでは `talk` などの同名 text channel がカテゴリごとに存在する。`categoryId` を必ず併用して一意化する。
-- **フォーラム ≠ テキストチャンネル**: `GuildForum` 型のチャンネルに `discord_send` は通らない。スレッドを介して投稿する。
-- **deferred tool**: `mcp__discord__*` は schema 未ロード状態では呼べない。Step 1 を飛ばして直接呼ぶと `InputValidationError`。
 - **`discord_get_server_info` のレスポンスは大きい**: text/voice/category/forum 全列挙される。チャンネル数の多いサーバでは応答が長いので、結果を変数に取って必要箇所だけ参照する形でメモリにとどめる。
 - **同じ会話内で繰り返し送る場合**: 一度解決した channelId / threadId は会話コンテキストに残しておき、再度の `discord_get_server_info` を避ける。
