@@ -46,3 +46,5 @@ build後の再テストではdist配下のCommonJSテストもVitest4が収集�
 ## 自己レビューと懸念
 messageCreate・Bot起動順・他サービス実装は変更なし。JSONは静的importのためtscがdistへ同梱し、相対importで実行cwdに依存しない。必須データの不正はフォールバックで隠さず起動失敗となる。独立レビュー・push・PR・merge・deploy・本番検証はTask2でcontrollerが行う。
 npm ciの既存依存auditは19件（moderate 6 / high 11 / critical 2）。今回依存は変更しておらず、スコープ外としてcontrollerへ報告済み。
+
+Task 1: done 57afc0f — 96件の静的JSON移行、Node22で31テスト・build・型・compiled smoke・元CSV完全一致の検証完了。
