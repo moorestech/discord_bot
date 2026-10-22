@@ -22,7 +22,8 @@ class HrContentService {
 
   getRandomContent(): string | null {
     if (this.contents.length === 0) {
-      // silent-ok: 初期化前は抽選不可 / messageCreateの既存No content available警告で判別する
+      // 本番はlogin前に初期化をawaitし、検証失敗なら起動終了する。
+      // silent-ok: 初期化前nullの公開API互換 / API利用者が戻り値で未初期化を判別する
       return null;
     }
     const index = Math.floor(Math.random() * this.contents.length);
